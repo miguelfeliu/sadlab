@@ -16,7 +16,7 @@ queue_for_ip_socket.on('message', (data) => {
     if (parsed_data.type === 'new') {
         // creo un objeto para la ip worker
         const queueip = {   
-            nodo: parsed_data.message.id ,         
+            type: 'ip' ,         
             ipworker: parsed_data.message.worker ,
             ipclient: parsed_data.message.client            
         };       
@@ -30,11 +30,9 @@ queue_for_ip_socket.on('message', (data) => {
 // WORKER NUEVO SOLICITA UNA COLA
 client_worker_socket.on('message', (data) => {
     const parsed_data = JSON.parse(data);
-    if(parsed_data.type === 'worker')
+    if (parsed_data.type === 'worker')
     {
         client_worker_socket.send(queuesIP[0].ipworker);
     }    
-    else {
-        client_worker_socket.send(queuesIP[0].ipclient);
-    }     
+       
 });
