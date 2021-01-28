@@ -1,51 +1,40 @@
 const zmq = require('zeromq/v5-compat');
-const clients_socket = zmq.socket('router');
-const workers_socket = zmq.socket('router');
+const client_worker_socket = zmq.socket('rep');
+const queue_for_ip_socket = zmq.socket('pull');
+const cliente_queue_socket = zmq.socket('push');
 
-const fork = require('child_process').fork;
+// array con las ip de las colas, tanto para recibir clientes como worker
+const queuesIP = [];
 
-const association_client_worker = new Map();
-const clients_waiting_for_cart_creation_with_a_job = [];
+// coneccion de los diferntes sockets
+client_worker_socket.bind('tcp://*:8009');
+queue_for_ip_socket.bind('tcp://*:8008');
 
-clients_socket.bind('tcp://*:8000');
-workers_socket.bind('tcp://*:8001');
-
-clients_socket.on('message', (client_id, del, data) => {
-    const parsed_client_id = JSON.stringify(client_id.toJSON());
+// recibimos las ip mediante el push de las colas
+queue_for_ip_socket.on('message', (data) => {    
     const parsed_data = JSON.parse(data);
-    if (association_client_worker.has(parsed_client_id)) {
-        const worker_associated = association_client_worker.get(parsed_client_id);
-        workers_socket.send(
-            [
-                Buffer.from(JSON.parse(worker_associated)),
-                del,
-                JSON.stringify({
-                    client_id: parsed_client_id,
-                    message: parsed_data.message
-                })
-            ]
-        );
-    } else {
-        clients_waiting_for_cart_creation_with_a_job.push({
-            client_id: parsed_client_id,
-            message: parsed_data.message
-        });
-        fork('worker.js');
-    }
+    if (parsed_data.type === 'new') {
+        // creo un objeto para la ip worker
+        const queueip = {   
+            nodo: parsed_data.message.id ,         
+            ipworker: parsed_data.message.worker ,
+            ipclient: parsed_data.message.client            
+        };       
+        // meto las ip en el array        
+        queuesIP.push(queueip);
+        //conecto la cola nueva al broker
+        cliente_queue_socket.connect(queueip.ipclient);
+    } 
 });
 
-workers_socket.on('message', (worker_id, del, data) => {
-    const parsed_worker_id = JSON.stringify(worker_id.toJSON());
+// WORKER NUEVO SOLICITA UNA COLA
+client_worker_socket.on('message', (data) => {
     const parsed_data = JSON.parse(data);
-    if (parsed_data.type === 'new_cart') {
-        const job = clients_waiting_for_cart_creation_with_a_job.shift();
-        association_client_worker.set(job.client_id, parsed_worker_id);
-        workers_socket.send([worker_id, del, JSON.stringify(job)]);
-    } else if (parsed_data.type === 'response') {
-        clients_socket.send([Buffer.from(JSON.parse(parsed_data.client_id)), del, JSON.stringify({ message: parsed_data.message })]);
-    } else if (parsed_data.type === 'finish_cart') {
-        association_client_worker.delete(parsed_data.client_id);
-        clients_socket.send([Buffer.from(JSON.parse(parsed_data.client_id)), del, JSON.stringify({ message: parsed_data.message })]);
-    }
-    console.log(association_client_worker.size);
+    if(parsed_data.type === 'worker')
+    {
+        client_worker_socket.send(queuesIP[0].ipworker);
+    }    
+    else {
+        client_worker_socket.send(queuesIP[0].ipclient);
+    }     
 });
