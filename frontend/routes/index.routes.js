@@ -14,11 +14,12 @@ var responses = {};
 
 pull.on('message', function (data) {
     console.log('Received');
-    data = JSON.parse(data);
-    var msgId = data.id;
-    var res = responses[msgId];
+    const parsed_data = JSON.parse(data);
+    console.log(parsed_data);
+    const msgId = parsed_data.id;
+    let res = responses[msgId];
 
-    res.send(data.message);
+    res.send(parsed_data.message);
     delete responses[msgId];
     console.log(responses);
 });
@@ -29,8 +30,8 @@ router.get('/', (req, res) => {
 
 router.post('/echo', (req, res) => {
     console.log('Post funcionando');
-    var msgId = uuid.v4();
-    var data = { id: msgId, message: req.body };
+    const msgId = uuid.v4();
+    const data = { id: msgId, message: req.body };
     responses[msgId] = res;
     push.send(JSON.stringify(data));
 });

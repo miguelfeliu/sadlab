@@ -42,6 +42,7 @@ push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
 
 // init queue
 broker_push.send(JSON.stringify({
+    type: 'init_queue',
     port_worker_to_queue: workers_router_port
 }));
 
@@ -63,7 +64,7 @@ broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
     console.log('data:', parsed_data);
     // no hay workers disponibles
-    /*if (my_workers.length == 0) {
+    if (my_workers.length == 0) {
         let found = false;
         for (let i = 0; i < assossiation_queue_workers.size; i++) {
             if (num_workers > 0) {
@@ -73,13 +74,14 @@ broker_sub.on('message', (topic, data) => {
             }
         }
         if (!found) {
-
+            console.log('entra en found');
+            jobs.push(parsed_data);
         }
     }
     // hay workers disponibles localmente
     else {
 
-    }*/
+    }
 });
 
 /*
@@ -94,20 +96,21 @@ queues_router.on('message', (queue_id, data) => {
 workers_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
-    /*if (parsed_data.type === 'new') {
+    if (parsed_data.type === 'new') {
         console.log('a worker has joined');
         if (jobs.length === 0) {
             my_workers.push(JSON.stringify(worker_id));
-            notifyChange();
+            // notifyChange();
         } else {
-
+            const job = jobs.shift();
+            workers_router.send([worker_id, del, JSON.stringify(job)]);
         }
     }
     // el worker ha finalizado su trabajo
     else if (parsed_data.type === 'response') {
-        broker_push.send({
+        broker_push.send(JSON.stringify({
             type: 'response',
-            result: parsed_data
-        });
-    }*/
+            ...parsed_data
+        }));
+    }
 });

@@ -65,13 +65,21 @@ worker_router.on('message', (worker_id, del, data) => {
 frontend_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
     const queue_topic = get_next_queue_for_requests();
-    queue_pub.send([queue_topic, JSON.stringify(data)]);
+    queue_pub.send([queue_topic, JSON.stringify(parsed_data)]);
 });
 
 // queue
 queue_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
-    const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
-    console.log('ip', workers_router_ip);
-    round_robin_queues_ip_workers.push(workers_router_ip);
+    console.log('entra en queue_pull');
+    if (parsed_data.type === 'init_queue') {
+        const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
+        console.log('ip', workers_router_ip);
+        round_robin_queues_ip_workers.push(workers_router_ip);
+    }
+    else if (parsed_data.type === 'response') {
+        console.log('enviando petición resuelta al frontend desde el broker');
+        frontend_push.send(JSON.stringify(parsed_data));
+    }
+    
 });

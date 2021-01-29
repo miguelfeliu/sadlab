@@ -13,6 +13,16 @@ req_broker.on('message', data => {
     }));
 })
 
+req_queue.on('message', data => {
+    const parsed_data = JSON.parse(data);
+    console.log('data del cliente', parsed_data);
+    req_queue.send(JSON.stringify({
+        type: 'response',
+        message: parsed_data.message,
+        id: parsed_data.id
+    }));
+});
+
 // the worker asks to the broker for the queue ip
 req_broker.send(JSON.stringify({
     type: 'request_queue_ip'
