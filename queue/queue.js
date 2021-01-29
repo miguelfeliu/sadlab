@@ -2,7 +2,7 @@ const zmq = require('zeromq/v5-compat');
 
 // brokers sockets
 const broker_push = zmq.socket('push');
-const broker_sub = zmq.socket('pull');
+const broker_sub = zmq.socket('sub');
 // workers sockets
 const workers_router = zmq.socket('router');
 // queues sockets
@@ -27,8 +27,8 @@ const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 
 // bind
-/*broker_sub.bind('tcp://' + BROKER_PULL_IP);
-workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
+broker_sub.connect('tcp://localhost:8447');
+/*workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
 queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
 
 // connect
@@ -49,7 +49,8 @@ function notifyChange() {
 }
 
 // broker
-broker_sub.on('message', data => {
+broker_sub.subscribe(queue_topic);
+broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
     console.log('data:', parsed_data);
     // no hay workers disponibles

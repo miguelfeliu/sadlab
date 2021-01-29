@@ -13,7 +13,7 @@ const queue_pub = zmq.socket('pub');
 const queue_pull = zmq.socket('pull');
 
 // round robin queues
-// const round_robin_queues_ip_workers = []; // las ips de los socket pull donde recibiran las colas
+const round_robin_queues_ip_workers = []; // las ips de los socket pull donde recibiran las colas
 
 const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC']; // los ids del socket router
 
@@ -27,7 +27,8 @@ function get_next_queue_ip_for_workers() {
 function get_next_queue_for_requests() {
     const queue_ip = round_robin_queue_topics_requests.shift();
     round_robin_queue_topics_requests.push(queue_ip);
-    return queue_ip;
+    // return queue_ip;
+    return 'queueA';
 }
 
 console.log('Broker en marcha!');
@@ -38,11 +39,11 @@ frontend_pull.bind('tcp://*:8009');
 // worker
 
 // queue
-
+queue_pub.bind('tcp://*:8447');
 
 // connect
 // frontend
-frontend_push.connect('tcp://*:8008');
+frontend_push.connect('tcp://localhost:8008');
 // worker
 
 // queue
@@ -63,7 +64,7 @@ worker_pull.on('message', data => {
 
 // frontend
 frontend_pull.on('message', data => {
-    console.log('data', JSON.parse(data));
-    const queue_topic = get_next_queue_ip_for_workers();
-    queue_pub.send([queue_topic, data]);
+    const parsed_data = JSON.parse(data);
+    const queue_topic = get_next_queue_for_requests();
+    queue_pub.send([queue_topic, JSON.stringify(data)]);
 });
