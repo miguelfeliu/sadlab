@@ -1,15 +1,18 @@
 const { Router } = require('express');
 const zmq = require('zeromq/v5-compat');
 const uuid = require('node-uuid');
-const sreq = zmq.socket('req');
+const push = zmq.socket('push');
+const pull = zmq.socket('pull');
 
-sreq.connect('tcp://localhost:8007');
-sreq.identity = 'Client';
+pull.bind('tcp://*:8008');
+push.connect('tcp://localhost:8009');
+
+
 const router = Router();
 
 var responses = {};
 
-sreq.on('message', function (data) {
+pull.on('message', function (data) {
     console.log('Received');
     data = JSON.parse(data);
     var msgId = data.id;
@@ -29,7 +32,7 @@ router.post('/echo', (req, res) => {
     var msgId = uuid.v4();
     var data = { id: msgId, message: req.body };
     responses[msgId] = res;
-    sreq.send(JSON.stringify(data));
+    push.send(JSON.stringify(data));
 });
 
 exports.index_router = router;

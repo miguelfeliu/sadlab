@@ -2,7 +2,7 @@ const zmq = require('zeromq/v5-compat');
 
 // brokers sockets
 const broker_push = zmq.socket('push');
-const broker_pull = zmq.socket('pull');
+const broker_sub = zmq.socket('pull');
 // workers sockets
 const workers_router = zmq.socket('router');
 // queues sockets
@@ -21,25 +21,20 @@ const PUSH_TO_QUEUE1 = '127.0.0.1:8000';
 const PUSH_TO_QUEUE2 = '127.0.0.1:8000';
 
 // queues data
+const queue_topic = 'queueA';
 const my_workers = [];
 const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 
 // bind
-broker_pull.bind('tcp://' + BROKER_PULL_IP);
+/*broker_sub.bind('tcp://' + BROKER_PULL_IP);
 workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
-queues_router.bind('tcp://' + QUEUES_ROUTER_IP);
+queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
 
 // connect
-broker_push.connect('tcp://' + BROKER_PUSH_INIT_IP);
+/*broker_push.connect('tcp://' + BROKER_PUSH_INIT_IP);
 push_to_queue1.connect('tcp://' + PUSH_TO_QUEUE1);
-push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);
-
-// send pull ip to the broker
-broker_push.send({
-    type: 'new',
-    ip: BROKER_PULL_IP
-});
+push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
 
 // functions
 function notifyChange() {
@@ -54,10 +49,11 @@ function notifyChange() {
 }
 
 // broker
-broker_pull.on('message', data => {
+broker_sub.on('message', data => {
     const parsed_data = JSON.parse(data);
+    console.log('data:', parsed_data);
     // no hay workers disponibles
-    if (my_workers.length == 0) {
+    /*if (my_workers.length == 0) {
         let found = false;
         for (let i = 0; i < assossiation_queue_workers.size; i++) {
             if (num_workers > 0) {
@@ -73,9 +69,9 @@ broker_pull.on('message', data => {
     // hay workers disponibles localmente
     else {
 
-    }
+    }*/
 });
-
+/*
 // queue
 queues_router.on('message', (queue_id, data) => {
     const parsed_data = JSON.parse(data);
@@ -102,3 +98,4 @@ workers_router.on('message', (worker_id, del, data) => {
         });
     }
 });
+*/

@@ -1,58 +1,69 @@
 const zmq = require('zeromq/v5-compat');
 
 // workers sockets
-const worker_socket = zmq.socket('rep');
+const worker_push = zmq.socket('push');
+const worker_pull = zmq.socket('pull');
 
 // frontend sockets
 const frontend_push = zmq.socket('push');
 const frontend_pull = zmq.socket('pull');
 
 // queue sockets
-const queue_push = zmq.socket('push');
+const queue_pub = zmq.socket('pub');
 const queue_pull = zmq.socket('pull');
 
+// round robin queues
+// const round_robin_queues_ip_workers = []; // las ips de los socket pull donde recibiran las colas
 
-// array con las ip de las colas, tanto para recibir clientes como worker
-const queuesIp = [];
+const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC']; // los ids del socket router
+
+// functions
+function get_next_queue_ip_for_workers() {
+    const queue_ip = round_robin_queues_ip_workers.shift();
+    round_robin_queues_ip_workers.push(queue_ip);
+    return queue_ip;
+}
+
+function get_next_queue_for_requests() {
+    const queue_ip = round_robin_queue_topics_requests.shift();
+    round_robin_queue_topics_requests.push(queue_ip);
+    return queue_ip;
+}
 
 console.log('Broker en marcha!');
-var count = 0;
-// coneccion de los diferntes sockets
-client_socket.bind('tcp://*:8007');
 
-/*worker_socket.bind('tcp://*:8009');
-queue_for_ip_socket.bind('tcp://*:8008');
+// bind
+// frontend
+frontend_pull.bind('tcp://*:8009');
+// worker
 
-// recibimos las ip mediante el push de las colas
-queue_for_ip_socket.on('message', (data) => {
+// queue
+
+
+// connect
+// frontend
+frontend_push.connect('tcp://*:8008');
+// worker
+
+// queue
+
+// worker
+worker_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
-    if (parsed_data.type === 'new') {
-        // creo un objeto para la ip worker
-        const queueip = {
-            ip: parsed_data.ip
-        };
-        // meto las ip en el array        
-        queuesIp.push(queueip);
-        //conecto la cola nueva al broker
-        client_queue_socket.connect(queueip.ipclient);
+    if (parsed_data.type === 'request_queue_ip') {
+        const queue_ip = get_next_queue_ip_for_workers();
+        worker_push.send({
+            queue_ip: queue_ip
+        });
+    }
+    else if (parsed_data.type === 'job_finished') {
+        frontend_push.send(data);
     }
 });
 
-// WORKER NUEVO SOLICITA UNA COLA
-worker_socket.on('message', (data) => {
-    const parsed_data = JSON.parse(data);
-    if (parsed_data.type === 'worker') {
-        worker_socket.send(queuesIp[count % queuesIp.length].ip);
-        count++;
-    }
-});*/
-
-client_socket.on('message', (client_id, del, data) => {
-    console.log('client_id:', JSON.stringify(client_id));
-    console.log('data: ', JSON.parse(data));
-    client_socket.send([client_id, del, {
-        texto: 'Hola mundo'
-    }]);
-    // client_queue_socket.send(data);
-    count++;
+// frontend
+frontend_pull.on('message', data => {
+    console.log('data', JSON.parse(data));
+    const queue_topic = get_next_queue_ip_for_workers();
+    queue_pub.send([queue_topic, data]);
 });
