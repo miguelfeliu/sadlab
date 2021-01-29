@@ -1,8 +1,7 @@
 const zmq = require('zeromq/v5-compat');
 
 // workers sockets
-const worker_push = zmq.socket('push');
-const worker_pull = zmq.socket('pull');
+const worker_router = zmq.socket('router');
 
 // frontend sockets
 const frontend_push = zmq.socket('push');
@@ -21,7 +20,8 @@ const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC']; // los
 function get_next_queue_ip_for_workers() {
     const queue_ip = round_robin_queues_ip_workers.shift();
     round_robin_queues_ip_workers.push(queue_ip);
-    return queue_ip;
+    // return queue_ip;
+    return 'tcp://localhost:8123';
 }
 
 function get_next_queue_for_requests() {
@@ -37,7 +37,7 @@ console.log('Broker en marcha!');
 // frontend
 frontend_pull.bind('tcp://*:8009');
 // worker
-
+worker_router.bind('tcp://*:8558');
 // queue
 queue_pub.bind('tcp://*:8447');
 
@@ -48,14 +48,16 @@ frontend_push.connect('tcp://localhost:8008');
 
 // queue
 
+// zeromq functions
 // worker
-worker_pull.on('message', data => {
+worker_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
+    console.log('Request from worker:', parsed_data);
     if (parsed_data.type === 'request_queue_ip') {
         const queue_ip = get_next_queue_ip_for_workers();
-        worker_push.send({
+        worker_router.send([worker_id, del, JSON.stringify({
             queue_ip: queue_ip
-        });
+        })]);
     }
     else if (parsed_data.type === 'job_finished') {
         frontend_push.send(data);

@@ -27,11 +27,12 @@ const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 
 // bind
-broker_sub.connect('tcp://localhost:8447');
+workers_router.bind('tcp://*:8123');
 /*workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
 queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
 
 // connect
+broker_sub.connect('tcp://localhost:8447');
 /*broker_push.connect('tcp://' + BROKER_PUSH_INIT_IP);
 push_to_queue1.connect('tcp://' + PUSH_TO_QUEUE1);
 push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
@@ -72,18 +73,21 @@ broker_sub.on('message', (topic, data) => {
 
     }*/
 });
+
 /*
 // queue
 queues_router.on('message', (queue_id, data) => {
     const parsed_data = JSON.parse(data);
     assossiation_queue_workers.get(parsed_data.ip) = parsed_data.amount_workers;
 });
+*/
 
 // worker
 workers_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
     if (parsed_data.type === 'new') {
+        console.log('a worker has joined');
         if (jobs.length === 0) {
             my_workers.push(JSON.stringify(worker_id));
             notifyChange();
@@ -99,4 +103,3 @@ workers_router.on('message', (worker_id, del, data) => {
         });
     }
 });
-*/
