@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const zmq = require('zeromq');
+const zmq = require('zeromq/v5-compat');
 const uuid = require('node-uuid');
 const sreq = zmq.socket('req');
 
@@ -25,6 +25,7 @@ router.get('/', (req, res) => {
 });
 
 router.post('/echo', (req, res) => {
+    console.log('Post funcionando');
     var msgId = uuid.v4();
     var data = { id: msgId, message: req.body };
     responses[msgId] = res;

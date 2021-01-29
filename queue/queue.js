@@ -23,7 +23,7 @@ const PUSH_TO_QUEUE2 = '127.0.0.1:8000';
 // queues data
 const my_workers = [];
 const jobs = [];
-const assossiation_queue_workers = new Map(); // map { queue_id -> length de la lista de workers }
+const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 
 // bind
 broker_pull.bind('tcp://' + BROKER_PULL_IP);
@@ -56,6 +56,7 @@ function notifyChange() {
 // broker
 broker_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
+    // no hay workers disponibles
     if (my_workers.length == 0) {
         let found = false;
         for (let i = 0; i < assossiation_queue_workers.size; i++) {
@@ -68,6 +69,10 @@ broker_pull.on('message', data => {
         if (!found) {
 
         }
+    }
+    // hay workers disponibles localmente
+    else {
+
     }
 });
 
