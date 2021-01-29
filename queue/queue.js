@@ -11,14 +11,16 @@ const push_to_queue2 = zmq.socket('push');
 const queues_router = zmq.socket('router');
 
 // bind network data
-const BROKER_PULL_IP = '127.0.0.1:8001';
+/*const BROKER_PULL_IP = '127.0.0.1:8001';
 const WORKERS_ROUTER_IP = '127.0.0.1:8002';
-const QUEUES_ROUTER_IP = '127.0.0.1:8003';
+const QUEUES_ROUTER_IP = '127.0.0.1:8003';*/
 
 // connect network data
-const BROKER_PUSH_INIT_IP = '127.0.0.1:8000';
+/*const BROKER_PUSH_INIT_IP = '127.0.0.1:8000';
 const PUSH_TO_QUEUE1 = '127.0.0.1:8000';
-const PUSH_TO_QUEUE2 = '127.0.0.1:8000';
+const PUSH_TO_QUEUE2 = '127.0.0.1:8000';*/
+const workers_router_port = '8123';
+const workers_router_ip = 'tcp://*:' + workers_router_port;
 
 // queues data
 const queue_topic = 'queueA';
@@ -27,18 +29,24 @@ const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 
 // bind
-workers_router.bind('tcp://*:8123');
+workers_router.bind(workers_router_ip);
 /*workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
 queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
 
 // connect
 broker_sub.connect('tcp://localhost:8447');
-/*broker_push.connect('tcp://' + BROKER_PUSH_INIT_IP);
+broker_push.connect('tcp://localhost:8111');
+/*;
 push_to_queue1.connect('tcp://' + PUSH_TO_QUEUE1);
 push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
 
+// init queue
+broker_push.send(JSON.stringify({
+    port_worker_to_queue: workers_router_port
+}));
+
 // functions
-function notifyChange() {
+/*function notifyChange() {
     const data = {
         type: 'notify_change',
         ip: PUB_IP,
@@ -47,7 +55,7 @@ function notifyChange() {
     assossiation_queue_workers.forEach((num_workers, queue_id_string) => {
         queues_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(data)]);
     });
-}
+}*/
 
 // broker
 broker_sub.subscribe(queue_topic);
@@ -86,7 +94,7 @@ queues_router.on('message', (queue_id, data) => {
 workers_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
-    if (parsed_data.type === 'new') {
+    /*if (parsed_data.type === 'new') {
         console.log('a worker has joined');
         if (jobs.length === 0) {
             my_workers.push(JSON.stringify(worker_id));
@@ -101,5 +109,5 @@ workers_router.on('message', (worker_id, del, data) => {
             type: 'response',
             result: parsed_data
         });
-    }
+    }*/
 });

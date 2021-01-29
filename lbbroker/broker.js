@@ -20,8 +20,7 @@ const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC']; // los
 function get_next_queue_ip_for_workers() {
     const queue_ip = round_robin_queues_ip_workers.shift();
     round_robin_queues_ip_workers.push(queue_ip);
-    // return queue_ip;
-    return 'tcp://localhost:8123';
+    return queue_ip;
 }
 
 function get_next_queue_for_requests() {
@@ -40,13 +39,11 @@ frontend_pull.bind('tcp://*:8009');
 worker_router.bind('tcp://*:8558');
 // queue
 queue_pub.bind('tcp://*:8447');
-
+queue_pull.bind('tcp://*:8111');
 // connect
 // frontend
 frontend_push.connect('tcp://localhost:8008');
 // worker
-
-// queue
 
 // zeromq functions
 // worker
@@ -69,4 +66,12 @@ frontend_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
     const queue_topic = get_next_queue_for_requests();
     queue_pub.send([queue_topic, JSON.stringify(data)]);
+});
+
+// queue
+queue_pull.on('message', data => {
+    const parsed_data = JSON.parse(data);
+    const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
+    console.log('ip', workers_router_ip);
+    round_robin_queues_ip_workers.push(workers_router_ip);
 });
