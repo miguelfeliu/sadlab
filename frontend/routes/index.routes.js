@@ -3,7 +3,7 @@ const zmq = require('zeromq');
 const uuid = require('node-uuid');
 const sreq = zmq.socket('req');
 
-sreq.connect('tcp://localhost:8000');
+sreq.connect('tcp://localhost:8007');
 sreq.identity = 'Client';
 const router = Router();
 
