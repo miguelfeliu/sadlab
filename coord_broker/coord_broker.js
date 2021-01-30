@@ -21,17 +21,23 @@ function print_assossiation_queue_workers() {
 // queue
 queue_xsub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('Received workers from', parsed_data.queue_name);
-    assossiation_queue_workers.set(parsed_data.queue_name, parsed_data.num_workers);
-    const list_queue_workers = [];
-    assossiation_queue_workers.forEach((num_workers, queue_name) => {
-        list_queue_workers.push({
-            queue_name: queue_name,
-            num_workers: num_workers
+    if (parsed_data.type === 'queue_status') {
+        assossiation_queue_workers.set(parsed_data.queue_name, parsed_data.num_workers);
+        const list_queue_workers = [];
+        assossiation_queue_workers.forEach((num_workers, queue_name) => {
+            list_queue_workers.push({
+                queue_name: queue_name,
+                num_workers: num_workers
+            });
         });
-    });
-    queue_xpub.send([topic, JSON.stringify({
-        queues: list_queue_workers})]);
+        queue_xpub.send([topic, JSON.stringify({
+            type: 'queue_status',
+            queues: list_queue_workers
+        })]);
+    }
+    else if (parsed_data.type === 'job') {
+
+    }
 });
 
 queue_xpub.on('message', (data, bla) => {

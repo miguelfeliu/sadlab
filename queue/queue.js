@@ -21,7 +21,6 @@ const WORKER_ROUTER_IP = 'tcp://*:' + WORKER_ROUTER_PORT;
 const queue_topic = my_args[0];
 const my_workers = [];
 const jobs = [];
-const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 const workers_global = new Map();
 
 // bind
@@ -59,9 +58,12 @@ broker_sub.on('message', (topic, data) => {
     // no hay workers disponibles
     if (my_workers.length === 0) {
         let found = false;
-        for (let i = 0; i < assossiation_queue_workers.size; i++) {
-            if (num_workers > 0) {
-                queues_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(parsed_data)]);
+        const queue_names = workers_global.keys();
+        for (queue_name of queue_names) {
+            if (workers_global.get(queue_name) > 0) {
+                coord_pub.send(['DATA', JSON.stringify({
+                    type: 'job',
+                    ...msg})]);
                 found = true;
                 break;
             }
@@ -73,7 +75,7 @@ broker_sub.on('message', (topic, data) => {
     }
     // hay workers disponibles localmente
     else {
-        let worker_id = my_workers.shift();
+        const worker_id = my_workers.shift();
         workers_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
     }
 });
@@ -105,13 +107,19 @@ workers_router.on('message', (worker_id, del, data) => {
 // coordinator
 coord_sub.on('message', function(topic, data) {
     const parsed_data = JSON.parse(data);
-    parsed_data.queues.forEach(queue => {
-        workers_global.set(queue.queue_name, queue.num_workers);
-    });
+    if (parsed_data.type === 'queue_status') {
+        parsed_data.queues.forEach(queue => {
+            workers_global.set(queue.queue_name, queue.num_workers);
+        });
+    }
+    else if (parsed_data.type === 'job') {
+        broker_push.send(JSON.stringify(parsed_data.result));
+    }
 });
 
 setInterval(() => {
     let msg = {
+        type: 'queue_status',
         queue_name: queue_topic,
         num_workers: my_workers.length
     };
