@@ -4,7 +4,7 @@ const zmq = require('zeromq/v5-compat');
 const queue_xsub = zmq.socket('xsub');
 const queue_xpub = zmq.socket('xpub');
 
-//bind
+// bind
 queue_xsub.bind('tcp://*:5556');
 queue_xpub.bind('tcp://*:5555');
 
@@ -21,7 +21,6 @@ function print_assossiation_queue_workers() {
 // queue
 queue_xsub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('llega5', parsed_data);
     if (parsed_data.type === 'queue_status') {
         assossiation_queue_workers.set(parsed_data.queue_name, parsed_data.num_workers);
         const list_queue_workers = [];
@@ -37,7 +36,6 @@ queue_xsub.on('message', (topic, data) => {
         })]);
     }
     else if (parsed_data.type === 'job') {
-        console.log('entra en job');
         queue_xpub.send([topic, JSON.stringify(parsed_data)]);
     }
 });
@@ -56,3 +54,4 @@ queue_xpub.on('message', (data, bla) => {
   setInterval(() => {
       print_assossiation_queue_workers();
   }, 5000);
+  

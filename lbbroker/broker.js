@@ -17,10 +17,10 @@ const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC'];
 
 // functions
 function get_next_queue_ip_for_workers() {
-    // const queue_ip = round_robin_queues_ip_workers.shift();
-    // round_robin_queues_ip_workers.push(queue_ip);
-    // return queue_ip;
-    return round_robin_queues_ip_workers[1];
+    const queue_ip = round_robin_queues_ip_workers.shift();
+    round_robin_queues_ip_workers.push(queue_ip);
+    return queue_ip;
+    // return round_robin_queues_ip_workers[1];
 }
 
 function get_next_queue_for_requests() {
@@ -49,7 +49,6 @@ console.log('Broker en marcha!');
 // worker
 worker_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('Request from worker:', parsed_data);
     if (parsed_data.type === 'request_queue_ip') {
         const queue_ip = get_next_queue_ip_for_workers();
         worker_router.send([worker_id, del, JSON.stringify({
@@ -64,7 +63,6 @@ worker_router.on('message', (worker_id, del, data) => {
 // frontend
 frontend_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('llega1', parsed_data);
     const queue_topic = get_next_queue_for_requests();
     queue_pub.send([queue_topic, JSON.stringify(parsed_data)]);
 });
@@ -74,12 +72,9 @@ queue_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
     if (parsed_data.type === 'init_queue') {
         const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
-        console.log('ip', workers_router_ip);
         round_robin_queues_ip_workers.push(workers_router_ip);
     }
     else if (parsed_data.type === 'response') {
-        console.log('enviando petición resuelta al frontend desde el broker');
         frontend_push.send(JSON.stringify(parsed_data));
     }
-    
 });
