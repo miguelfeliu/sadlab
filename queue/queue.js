@@ -54,19 +54,21 @@ function print_workers_global() {
 broker_sub.subscribe(queue_topic);
 broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('data:', parsed_data);
+    console.log('llega2', parsed_data);
     // no hay workers disponibles
     if (my_workers.length === 0) {
+        console.log('llega3');
         let found = false;
         const queue_names = workers_global.keys();
         for (queue_name of queue_names) {
             if (workers_global.get(queue_name) > 0) {
                 // envía a otra cola
+                console.log('llega4');
                 coord_pub.send(['DATA', JSON.stringify({
                     type: 'job',
                     queue_from: queue_topic,
                     queue_to: queue_name,
-                    ...msg
+                    ...parsed_data
                 })]);
                 found = true;
                 break;
@@ -101,6 +103,7 @@ worker_router.on('message', (worker_id, del, data) => {
     }
     // el worker ha finalizado su trabajo
     else if (parsed_data.type === 'response') {
+        console.log('llega8', parsed_data);
         broker_push.send(JSON.stringify({
             type: 'response',
             ...parsed_data
@@ -111,7 +114,7 @@ worker_router.on('message', (worker_id, del, data) => {
 
 // coordinator
 coord_sub.on('message', function (topic, data) {
-    const parsed_data = JSON.parse(data);
+    let parsed_data = JSON.parse(data);
     // recibe el estatus global de los workers que tienen las demás colas
     if (parsed_data.type === 'queue_status') {
         parsed_data.queues.forEach(queue => {
@@ -119,10 +122,12 @@ coord_sub.on('message', function (topic, data) {
         });
     }
     // recibe un trabajo de otra cola
-    else if (parsed_data.type === 'job') {
+    else if (parsed_data.type === 'job' && parsed_data.queue_to === queue_topic) {
         console.log('Mensaje recibido por otra cola');
+        console.log('llega6', parsed_data);
         if (my_workers.length > 0) {
             const worker_id = my_workers.shift();
+            parsed_data.type = 'response';
             worker_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
         }
     }

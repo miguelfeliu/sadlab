@@ -6,8 +6,7 @@ req_broker.connect('tcp://localhost:8558');
 
 req_broker.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('Processing... ', parsed_data);
-    req_queue.connect(parsed_data.queue_ip); // 'tcp://localhost:8123'
+    req_queue.connect(parsed_data.queue_ip);
     req_queue.send(JSON.stringify({
         type: 'new'
     }));
@@ -15,7 +14,7 @@ req_broker.on('message', data => {
 
 req_queue.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('data del cliente', parsed_data);
+    console.log('llega7', parsed_data);
     req_queue.send(JSON.stringify({
         type: 'response',
         ...parsed_data

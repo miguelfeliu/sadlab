@@ -16,10 +16,12 @@ req_broker.on('message', data => {
 req_queue.on('message', data => {
     const parsed_data = JSON.parse(data);
     console.log('data del cliente', parsed_data);
-    req_queue.send(JSON.stringify({
-        type: 'response',
-        ...parsed_data
-    }));
+    setTimeout(() => {
+        req_queue.send(JSON.stringify({
+            type: 'response',
+            ...parsed_data
+        }));
+    }, 15000);
 });
 
 // the worker asks to the broker for the queue ip
