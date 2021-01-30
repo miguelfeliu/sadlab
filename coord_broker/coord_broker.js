@@ -1,30 +1,29 @@
 const zmq = require('zeromq/v5-compat');
 
-const xsub = zmq.socket('xsub');
-const subListener = 'tcp://*:5556';
-xsub.bind(subListener);
+// queue sockets
+const queue_xsub = zmq.socket('xsub');
+const queue_xpub = zmq.socket('xpub');
 
-const xpub = zmq.socket('xpub');
-const pubListener = 'tcp://*:5555';
-xpub.bind(pubListener);
+//bind
+queue_xsub.bind('tcp://*:5556');
+queue_xpub.bind('tcp://*:5555');
 
-var workers = {};
+var assossiation_queue_workers = {};
 
-xsub.on('message', (topic, data) => {
+queue_xsub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data.toString());
     console.log('Received workers from', parsed_data.id);
-    workers[parsed_data.id] = parsed_data.workers
-    // workers = workers.concat(args);
-    xpub.send([topic, JSON.stringify(workers)]);
+    assossiation_queue_workers[parsed_data.id] = parsed_data.workers;
+    queue_xpub.send([topic, JSON.stringify(assossiation_queue_workers)]);
 });
 
-xpub.on('message', function(data, bla) {
+queue_xpub.on('message', (data, bla) => {
     // The data is a slow Buffer
     // The first byte is the subscribe (1) /unsubscribe flag (0)
-    var type = data[0]===0 ? 'unsubscribe' : 'subscribe';
+    let type = data[0]===0 ? 'unsubscribe' : 'subscribe';
     // The channel name is the rest of the buffer
-    var channel = data.slice(1).toString();
+    let channel = data.slice(1).toString();
     console.log('XPUB REC-> ' + type + ':' + channel);
     // We send it to subSock, so it knows to what channels to listen to
-    xsub.send(data);
+    queue_xsub.send(data);
   });

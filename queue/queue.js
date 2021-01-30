@@ -6,25 +6,15 @@ const broker_sub = zmq.socket('sub');
 // workers sockets
 const workers_router = zmq.socket('router');
 // queues sockets
-const push_to_queue1 = zmq.socket('push');
-const push_to_queue2 = zmq.socket('push');
 const queues_router = zmq.socket('router');
-
+// coordinator sockets
 const coord_sub = zmq.socket('sub');
 const coord_pub = zmq.socket('pub');
 
 const my_args = process.argv.slice(2);
 
 // bind network data
-/*const BROKER_PULL_IP = '127.0.0.1:8001';
-const WORKERS_ROUTER_IP = '127.0.0.1:8002';
-const QUEUES_ROUTER_IP = '127.0.0.1:8003';*/
-
-// connect network data
-/*const BROKER_PUSH_INIT_IP = '127.0.0.1:8000';
-const PUSH_TO_QUEUE1 = '127.0.0.1:8000';
-const PUSH_TO_QUEUE2 = '127.0.0.1:8000';*/
-const workers_router_port = my_args[1];//'8123';
+const workers_router_port = my_args[1];
 const workers_router_ip = 'tcp://*:' + workers_router_port;
 
 // queues data
@@ -35,34 +25,22 @@ const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
 var workers_global = {};
 
 // bind
+// worker bind
 workers_router.bind(workers_router_ip);
-/*workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
-queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
 
 // connect
+//broker connect
 broker_sub.connect('tcp://localhost:8447');
 broker_push.connect('tcp://localhost:8111');
-/*;
-push_to_queue1.connect('tcp://' + PUSH_TO_QUEUE1);
-push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
+// coordinator connect
+coord_sub.subscribe('DATA');
+coord_sub.connect('tcp://127.0.0.1:5555');
 
 // init queue
 broker_push.send(JSON.stringify({
     type: 'init_queue',
     port_worker_to_queue: workers_router_port
 }));
-
-// functions
-/*function notifyChange() {
-    const data = {
-        type: 'notify_change',
-        ip: PUB_IP,
-        workers: my_workers
-    };
-    assossiation_queue_workers.forEach((num_workers, queue_id_string) => {
-        queues_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(data)]);
-    });
-}*/
 
 // broker
 broker_sub.subscribe(queue_topic);
@@ -91,14 +69,6 @@ broker_sub.on('message', (topic, data) => {
     }
 });
 
-/*
-// queue
-queues_router.on('message', (queue_id, data) => {
-    const parsed_data = JSON.parse(data);
-    assossiation_queue_workers.get(parsed_data.ip) = parsed_data.amount_workers;
-});
-*/
-
 // worker
 workers_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
@@ -108,7 +78,6 @@ workers_router.on('message', (worker_id, del, data) => {
         if (jobs.length === 0) {
             console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
-            // notifyChange();
         } else {
             const job = jobs.shift();
             workers_router.send([worker_id, del, JSON.stringify(job)]);
@@ -124,9 +93,7 @@ workers_router.on('message', (worker_id, del, data) => {
     }
 });
 
-coord_sub.subscribe('DATA');
-coord_sub.connect('tcp://127.0.0.1:5555');
-
+// coordinator
 coord_sub.on('message', function(topic, data) {
     const parsed_data = JSON.parse(data);
     workers_global = parsed_data;
@@ -135,10 +102,10 @@ coord_sub.on('message', function(topic, data) {
 
 coord_pub.connect('tcp://127.0.0.1:5556');
 
-setInterval(function () {
+setInterval(() => {
     let msg = {
         id: queue_topic,
         workers: my_workers
     };
-    coord_pub.send(['DATA ', JSON.stringify(msg)])}, 10000);
-
+    coord_pub.send(['DATA', JSON.stringify(msg)]);
+}, 10000);
