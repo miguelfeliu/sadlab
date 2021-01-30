@@ -8,6 +8,8 @@ req_broker.on('message', data => {
     const parsed_data = JSON.parse(data);
     console.log('Processing... ', parsed_data);
     req_queue.connect(parsed_data.queue_ip); // 'tcp://localhost:8123'
+    console.log('identity:', req_queue.identity);
+    console.log('identity:', req_queue.id);
     req_queue.send(JSON.stringify({
         type: 'new'
     }));

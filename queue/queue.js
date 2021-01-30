@@ -4,41 +4,36 @@ const zmq = require('zeromq/v5-compat');
 const broker_push = zmq.socket('push');
 const broker_sub = zmq.socket('sub');
 // workers sockets
-const workers_router = zmq.socket('router');
+const worker_router = zmq.socket('router');
 // queues sockets
 const push_to_queue1 = zmq.socket('push');
 const push_to_queue2 = zmq.socket('push');
-const queues_router = zmq.socket('router');
+const queue_router = zmq.socket('pull');
 
-// bind network data
-/*const BROKER_PULL_IP = '127.0.0.1:8001';
-const WORKERS_ROUTER_IP = '127.0.0.1:8002';
-const QUEUES_ROUTER_IP = '127.0.0.1:8003';*/
-
-// connect network data
-/*const BROKER_PUSH_INIT_IP = '127.0.0.1:8000';
-const PUSH_TO_QUEUE1 = '127.0.0.1:8000';
-const PUSH_TO_QUEUE2 = '127.0.0.1:8000';*/
 const workers_router_port = '8123';
 const workers_router_ip = 'tcp://*:' + workers_router_port;
 
 // queues data
-const queue_topic = 'queueA';
+const queue_topic = my_args[0];
 const my_workers = [];
 const jobs = [];
+const assossiation_queue_name_queue_id = new Map();
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
+const my_args = process.argv.slice(2);
 
 // bind
-workers_router.bind(workers_router_ip);
-/*workers_router.bind('tcp://' + WORKERS_ROUTER_IP);
-queues_router.bind('tcp://' + QUEUES_ROUTER_IP);*/
+// bind worker
+worker_router.bind(workers_router_ip);
+// bind queue
+queue_router.bind(my_args[1]);
 
 // connect
+// connect queue
+push_to_queue1.connect(my_args[2]);
+push_to_queue2.connect(my_args[3]);
+// connect broker
 broker_sub.connect('tcp://localhost:8447');
 broker_push.connect('tcp://localhost:8111');
-/*;
-push_to_queue1.connect('tcp://' + PUSH_TO_QUEUE1);
-push_to_queue2.connect('tcp://' + PUSH_TO_QUEUE2);*/
 
 // init queue
 broker_push.send(JSON.stringify({
@@ -46,17 +41,33 @@ broker_push.send(JSON.stringify({
     port_worker_to_queue: workers_router_port
 }));
 
+push_to_queue1.send(JSON.stringify({
+    type: 'init_queue',
+    queue_name: queue_topic
+}));
+
+push_to_queue2.send(JSON.stringify({
+    type: 'init_queue',
+    queue_name: queue_topic
+}));
+
 // functions
-/*function notifyChange() {
+function notifyChange() {
     const data = {
         type: 'notify_change',
-        ip: PUB_IP,
-        workers: my_workers
+        num_workers: my_workers.length
     };
     assossiation_queue_workers.forEach((num_workers, queue_id_string) => {
-        queues_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(data)]);
+        queue_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(data)]);
     });
-}*/
+}
+
+function printMap() {
+    console.log('############## Print map: ##############')
+    assossiation_queue_workers.forEach((num_workers, queue_id_string) => {
+        console.log(queue_id_string + ' -> ' + num_workers);
+    });
+}
 
 // broker
 broker_sub.subscribe(queue_topic);
@@ -68,7 +79,7 @@ broker_sub.on('message', (topic, data) => {
         let found = false;
         for (let i = 0; i < assossiation_queue_workers.size; i++) {
             if (num_workers > 0) {
-                queues_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(parsed_data)]);
+                queue_router.send([Buffer.from(JSON.parse(queue_id_string)), JSON.stringify(parsed_data)]);
                 found = true;
                 break;
             }
@@ -84,26 +95,34 @@ broker_sub.on('message', (topic, data) => {
     }
 });
 
-/*
 // queue
-queues_router.on('message', (queue_id, data) => {
+queue_router.on('message', (queue_id, data) => {
+    const parsed_queue_id = JSON.stringify(queue_id.toJSON());
     const parsed_data = JSON.parse(data);
-    assossiation_queue_workers.get(parsed_data.ip) = parsed_data.amount_workers;
+    if (parsed_data.type === 'init_queue') {
+        assossiation_queue_name_queue_id.set(parsed_data.name,)
+        assossiation_queue_workers.set(parsed_queue_id, 0);
+    } else if (parsed_data.type === 'notify_change') {
+        printMap();
+        assossiation_queue_workers.set(parsed_queue_id, parsed_data.num_workers);
+        printMap();
+    }
 });
-*/
+
 
 // worker
-workers_router.on('message', (worker_id, del, data) => {
+worker_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
     if (parsed_data.type === 'new') {
+        console.log(worker_id.toJSON());
         console.log('a worker has joined');
         if (jobs.length === 0) {
             my_workers.push(JSON.stringify(worker_id));
-            // notifyChange();
+            notifyChange();
         } else {
             const job = jobs.shift();
-            workers_router.send([worker_id, del, JSON.stringify(job)]);
+            worker_router.send([worker_id, del, JSON.stringify(job)]);
         }
     }
     // el worker ha finalizado su trabajo
