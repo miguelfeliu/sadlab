@@ -18,8 +18,7 @@ req_queue.on('message', data => {
     console.log('data del cliente', parsed_data);
     req_queue.send(JSON.stringify({
         type: 'response',
-        message: parsed_data.message,
-        id: parsed_data.id
+        ...parsed_data
     }));
 });
 

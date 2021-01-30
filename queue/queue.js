@@ -10,6 +10,11 @@ const push_to_queue1 = zmq.socket('push');
 const push_to_queue2 = zmq.socket('push');
 const queues_router = zmq.socket('router');
 
+const coord_sub = zmq.socket('sub');
+const coord_pub = zmq.socket('pub');
+
+const my_args = process.argv.slice(2);
+
 // bind network data
 /*const BROKER_PULL_IP = '127.0.0.1:8001';
 const WORKERS_ROUTER_IP = '127.0.0.1:8002';
@@ -19,14 +24,15 @@ const QUEUES_ROUTER_IP = '127.0.0.1:8003';*/
 /*const BROKER_PUSH_INIT_IP = '127.0.0.1:8000';
 const PUSH_TO_QUEUE1 = '127.0.0.1:8000';
 const PUSH_TO_QUEUE2 = '127.0.0.1:8000';*/
-const workers_router_port = '8123';
+const workers_router_port = my_args[1];//'8123';
 const workers_router_ip = 'tcp://*:' + workers_router_port;
 
 // queues data
-const queue_topic = 'queueA';
+const queue_topic = my_args[0];
 const my_workers = [];
 const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
+var workers_global = {};
 
 // bind
 workers_router.bind(workers_router_ip);
@@ -64,7 +70,7 @@ broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
     console.log('data:', parsed_data);
     // no hay workers disponibles
-    if (my_workers.length == 0) {
+    if (my_workers.length === 0) {
         let found = false;
         for (let i = 0; i < assossiation_queue_workers.size; i++) {
             if (num_workers > 0) {
@@ -80,7 +86,8 @@ broker_sub.on('message', (topic, data) => {
     }
     // hay workers disponibles localmente
     else {
-
+        let worker_id = my_workers.shift();
+        workers_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
     }
 });
 
@@ -99,6 +106,7 @@ workers_router.on('message', (worker_id, del, data) => {
     if (parsed_data.type === 'new') {
         console.log('a worker has joined');
         if (jobs.length === 0) {
+            console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
             // notifyChange();
         } else {
@@ -112,5 +120,25 @@ workers_router.on('message', (worker_id, del, data) => {
             type: 'response',
             ...parsed_data
         }));
+        my_workers.push(JSON.stringify(worker_id));
     }
 });
+
+coord_sub.subscribe('DATA');
+coord_sub.connect('tcp://127.0.0.1:5555');
+
+coord_sub.on('message', function(topic, data) {
+    const parsed_data = JSON.parse(data);
+    workers_global = parsed_data;
+    console.log(topic.toString(), workers_global);
+});
+
+coord_pub.connect('tcp://127.0.0.1:5556');
+
+setInterval(function () {
+    let msg = {
+        id: queue_topic,
+        workers: my_workers
+    };
+    coord_pub.send(['DATA ', JSON.stringify(msg)])}, 10000);
+
