@@ -4,7 +4,7 @@ const zmq = require('zeromq/v5-compat');
 const broker_push = zmq.socket('push');
 const broker_sub = zmq.socket('sub');
 // workers sockets
-const workers_router = zmq.socket('router');
+const worker_router = zmq.socket('router');
 // queues sockets
 const queues_router = zmq.socket('router');
 // coordinator sockets
@@ -20,12 +20,12 @@ const WORKER_ROUTER_IP = 'tcp://*:' + WORKER_ROUTER_PORT;
 // queues data
 const queue_topic = my_args[0];
 const my_workers = [];
-const jobs = [];
+const pending_jobs = [];
 const workers_global = new Map();
 
 // bind
 // worker bind
-workers_router.bind(WORKER_ROUTER_IP);
+worker_router.bind(WORKER_ROUTER_IP);
 
 // connect
 //broker connect
@@ -61,37 +61,42 @@ broker_sub.on('message', (topic, data) => {
         const queue_names = workers_global.keys();
         for (queue_name of queue_names) {
             if (workers_global.get(queue_name) > 0) {
+                // envía a otra cola
                 coord_pub.send(['DATA', JSON.stringify({
                     type: 'job',
-                    ...msg})]);
+                    queue_from: queue_topic,
+                    queue_to: queue_name,
+                    ...msg
+                })]);
                 found = true;
                 break;
             }
         }
         if (!found) {
+            // apila el trabajo a la lista de trabajos pendientes
             console.log('entra en found');
-            jobs.push(parsed_data);
+            pending_jobs.push(parsed_data);
         }
     }
     // hay workers disponibles localmente
     else {
         const worker_id = my_workers.shift();
-        workers_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
+        worker_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
     }
 });
 
 // worker
-workers_router.on('message', (worker_id, del, data) => {
+worker_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
     if (parsed_data.type === 'new') {
         console.log('a worker has joined');
-        if (jobs.length === 0) {
+        if (pending_jobs.length === 0) {
             console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
         } else {
-            const job = jobs.shift();
-            workers_router.send([worker_id, del, JSON.stringify(job)]);
+            const job = pending_jobs.shift();
+            worker_router.send([worker_id, del, JSON.stringify(job)]);
         }
     }
     // el worker ha finalizado su trabajo
@@ -105,15 +110,21 @@ workers_router.on('message', (worker_id, del, data) => {
 });
 
 // coordinator
-coord_sub.on('message', function(topic, data) {
+coord_sub.on('message', function (topic, data) {
     const parsed_data = JSON.parse(data);
+    // recibe el estatus global de los workers que tienen las demás colas
     if (parsed_data.type === 'queue_status') {
         parsed_data.queues.forEach(queue => {
             workers_global.set(queue.queue_name, queue.num_workers);
         });
     }
+    // recibe un trabajo de otra cola
     else if (parsed_data.type === 'job') {
-        broker_push.send(JSON.stringify(parsed_data.result));
+        console.log('Mensaje recibido por otra cola');
+        if (my_workers.length > 0) {
+            const worker_id = my_workers.shift();
+            worker_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
+        }
     }
 });
 

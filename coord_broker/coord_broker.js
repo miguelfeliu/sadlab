@@ -36,7 +36,7 @@ queue_xsub.on('message', (topic, data) => {
         })]);
     }
     else if (parsed_data.type === 'job') {
-
+        
     }
 });
 

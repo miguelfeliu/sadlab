@@ -70,7 +70,6 @@ frontend_pull.on('message', data => {
 // queue
 queue_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('entra en queue_pull');
     if (parsed_data.type === 'init_queue') {
         const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
         console.log('ip', workers_router_ip);
