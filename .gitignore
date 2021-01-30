@@ -105,3 +105,4 @@ dist
 
 #
 queue/package-lock.json
+coord_broker/package-lock.json

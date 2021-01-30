@@ -14,33 +14,42 @@ const coord_pub = zmq.socket('pub');
 const my_args = process.argv.slice(2);
 
 // bind network data
-const workers_router_port = my_args[1];
-const workers_router_ip = 'tcp://*:' + workers_router_port;
+const WORKER_ROUTER_PORT = my_args[1];
+const WORKER_ROUTER_IP = 'tcp://*:' + WORKER_ROUTER_PORT;
 
 // queues data
 const queue_topic = my_args[0];
 const my_workers = [];
 const jobs = [];
 const assossiation_queue_workers = new Map(); // map { queue_id -> num workers }
-var workers_global = {};
+const workers_global = new Map();
 
 // bind
 // worker bind
-workers_router.bind(workers_router_ip);
+workers_router.bind(WORKER_ROUTER_IP);
 
 // connect
 //broker connect
 broker_sub.connect('tcp://localhost:8447');
 broker_push.connect('tcp://localhost:8111');
 // coordinator connect
+coord_pub.connect('tcp://127.0.0.1:5556');
 coord_sub.subscribe('DATA');
 coord_sub.connect('tcp://127.0.0.1:5555');
 
 // init queue
 broker_push.send(JSON.stringify({
     type: 'init_queue',
-    port_worker_to_queue: workers_router_port
+    port_worker_to_queue: WORKER_ROUTER_PORT
 }));
+
+// functions
+function print_workers_global() {
+    console.log('Asociación colas -> num_workers:');
+    workers_global.forEach((num_workers, queue_name) => {
+        console.log(queue_name, ': ', num_workers);
+    });
+}
 
 // broker
 broker_sub.subscribe(queue_topic);
@@ -96,16 +105,19 @@ workers_router.on('message', (worker_id, del, data) => {
 // coordinator
 coord_sub.on('message', function(topic, data) {
     const parsed_data = JSON.parse(data);
-    workers_global = parsed_data;
-    console.log(topic.toString(), workers_global);
+    parsed_data.queues.forEach(queue => {
+        workers_global.set(queue.queue_name, queue.num_workers);
+    });
 });
-
-coord_pub.connect('tcp://127.0.0.1:5556');
 
 setInterval(() => {
     let msg = {
-        id: queue_topic,
-        workers: my_workers
+        queue_name: queue_topic,
+        num_workers: my_workers.length
     };
     coord_pub.send(['DATA', JSON.stringify(msg)]);
 }, 10000);
+
+setInterval(() => {
+    print_workers_global();
+}, 5000);

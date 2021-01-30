@@ -13,8 +13,7 @@ const queue_pull = zmq.socket('pull');
 
 // round robin queues
 const round_robin_queues_ip_workers = []; // las ips de los socket pull donde recibiran las colas
-
-const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC']; // los ids del socket router
+const round_robin_queue_topics_requests = ['queueA', 'queueB', 'queueC'];
 
 // functions
 function get_next_queue_ip_for_workers() {
@@ -26,11 +25,8 @@ function get_next_queue_ip_for_workers() {
 function get_next_queue_for_requests() {
     const queue_ip = round_robin_queue_topics_requests.shift();
     round_robin_queue_topics_requests.push(queue_ip);
-    // return queue_ip;
-    return 'queueA';
+    return queue_ip;
 }
-
-console.log('Broker en marcha!');
 
 // bind
 // frontend
@@ -40,10 +36,13 @@ worker_router.bind('tcp://*:8558');
 // queue
 queue_pub.bind('tcp://*:8447');
 queue_pull.bind('tcp://*:8111');
+
 // connect
 // frontend
 frontend_push.connect('tcp://localhost:8008');
-// worker
+
+// init broker
+console.log('Broker en marcha!');
 
 // zeromq functions
 // worker

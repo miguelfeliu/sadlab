@@ -8,22 +8,43 @@ const queue_xpub = zmq.socket('xpub');
 queue_xsub.bind('tcp://*:5556');
 queue_xpub.bind('tcp://*:5555');
 
-var assossiation_queue_workers = {};
+const assossiation_queue_workers = new Map();
 
+// functions
+function print_assossiation_queue_workers() {
+    assossiation_queue_workers.forEach((num_workers, queue_name) => {
+        console.log('Asociación colas -> num_workers:');
+        console.log(queue_name, ': ', num_workers);
+    });
+}
+
+// queue
 queue_xsub.on('message', (topic, data) => {
-    const parsed_data = JSON.parse(data.toString());
-    console.log('Received workers from', parsed_data.id);
-    assossiation_queue_workers[parsed_data.id] = parsed_data.workers;
-    queue_xpub.send([topic, JSON.stringify(assossiation_queue_workers)]);
+    const parsed_data = JSON.parse(data);
+    console.log('Received workers from', parsed_data.queue_name);
+    assossiation_queue_workers.set(parsed_data.queue_name, parsed_data.num_workers);
+    const list_queue_workers = [];
+    assossiation_queue_workers.forEach((num_workers, queue_name) => {
+        list_queue_workers.push({
+            queue_name: queue_name,
+            num_workers: num_workers
+        });
+    });
+    queue_xpub.send([topic, JSON.stringify({
+        queues: list_queue_workers})]);
 });
 
 queue_xpub.on('message', (data, bla) => {
     // The data is a slow Buffer
     // The first byte is the subscribe (1) /unsubscribe flag (0)
-    let type = data[0]===0 ? 'unsubscribe' : 'subscribe';
+    var type = data[0]===0 ? 'unsubscribe' : 'subscribe';
     // The channel name is the rest of the buffer
-    let channel = data.slice(1).toString();
+    var channel = data.slice(1).toString();
     console.log('XPUB REC-> ' + type + ':' + channel);
     // We send it to subSock, so it knows to what channels to listen to
     queue_xsub.send(data);
   });
+
+  setInterval(() => {
+      print_assossiation_queue_workers();
+  }, 5000);
