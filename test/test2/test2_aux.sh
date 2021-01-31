@@ -1,5 +1,5 @@
-echo Realizando petición
-
+echo Ciente realizando petición...
+echo Respuesta
 curl --header "Content-Type: application/json" \
   --request POST \
   --data '{"message":"Hola mundo"}' \
