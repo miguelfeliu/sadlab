@@ -1,15 +1,14 @@
-# our base image
-# docker build -t carrito .
-# docker run -it carrito
 FROM node
 
 WORKDIR /usr/src/app
 
 COPY package*.json ./
 COPY *.js ./
-COPY .env ./
+COPY routes/ ./routes
 
-RUN npm install
+RUN npm install --silent
+
+EXPOSE 3000
 
 # run the application
-CMD ["node", "index.js"]s
+CMD ["node", "index.js"]

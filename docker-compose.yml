@@ -1,0 +1,69 @@
+version: '3'
+services:
+  front:
+    image: frontend
+    build: ./frontend/
+    environment: 
+      - BROKER_PUSH_CONN=tcp://broker:8009
+    ports: 
+      - "3000:3000" 
+
+  queueA:
+    image: queue
+    build: ./queue/
+    depends_on:
+      - "coord-broker"
+      - "broker"
+    env_file:
+      - ./queue.env
+    environment: 
+      - WORK_ROUTER_PORT=8123
+    command: node queue.js queueA
+
+  queueB:
+    image: queue
+    build: ./queue/
+    depends_on:
+      - "coord-broker"
+      - "broker"
+      - "queueA"
+    env_file:
+      - ./queue.env
+    environment: 
+      - WORK_ROUTER_PORT=8124
+    command: node queue.js queueB
+
+  queueC:
+    image: queue
+    build: ./queue/
+    depends_on:
+      - "coord-broker"
+      - "broker"
+      - "queueB"
+    env_file:
+      - ./queue.env
+    environment: 
+      - WORK_ROUTER_PORT=8125
+    command: node queue.js queueC
+
+  broker:
+    image: broker
+    build: ./lbbroker/
+    environment: 
+      - FRONT_PUSH_CONN=tcp://front:8008
+      
+  worker:
+    image: worker
+    build: ./worker/
+    depends_on:
+      - "queueA"
+      - "queueB"
+      - "queueC"
+    environment: 
+      - BROKER_REQ_CONN=tcp://broker:8558
+  
+  coord-broker:
+    image: coord-broker
+    build: ./coord_broker/
+
+  

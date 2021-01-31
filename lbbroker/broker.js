@@ -30,16 +30,21 @@ function get_next_queue_for_requests() {
 
 // bind
 // frontend
-frontend_pull.bind('tcp://*:8009');
+const fe_bind = process.env.FRONT_PULL_BIND || 'tcp://*:8009';
+frontend_pull.bind(fe_bind);
 // worker
-worker_router.bind('tcp://*:8558');
+const wo_bind = process.env.WORKER_ROUTER_BIND || 'tcp://*:8558';
+worker_router.bind(wo_bind);
 // queue
-queue_pub.bind('tcp://*:8447');
-queue_pull.bind('tcp://*:8111');
+const qu_pub_bind = process.env.QUEUE_PUB_BIND || 'tcp://*:8447';
+queue_pub.bind(qu_pub_bind);
+const qu_pull_bind = process.env.QUEUE_PULL_BIND || 'tcp://*:8111';
+queue_pull.bind(qu_pull_bind);
 
 // connect
 // frontend
-frontend_push.connect('tcp://localhost:8008');
+const fe_push_conn = process.env.FRONT_PUSH_CONN || 'tcp://localhost:8008';
+frontend_push.connect(fe_push_conn);
 
 // init broker
 console.log('Broker en marcha!');
@@ -70,8 +75,8 @@ frontend_pull.on('message', data => {
 queue_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
     if (parsed_data.type === 'init_queue') {
-        const workers_router_ip = 'tcp://localhost:' + parsed_data.port_worker_to_queue;
-        round_robin_queues_ip_workers.push(workers_router_ip);
+        let full_ip = parsed_data.ip_worker_to_queue;
+        round_robin_queues_ip_workers.push(full_ip);
     }
     else if (parsed_data.type === 'response') {
         frontend_push.send(JSON.stringify(parsed_data));
