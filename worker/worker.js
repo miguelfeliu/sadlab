@@ -13,12 +13,10 @@ req_broker.on('message', data => {
 })
 
 req_queue.on('message', data => {
-    const parsed_data = JSON.parse(data);
+    let parsed_data = JSON.parse(data);
     if (parsed_data.type === 'request_job') {
-        req_queue.send(JSON.stringify({
-            type: 'response',
-            ...parsed_data
-        }));
+        parsed_data.type = 'response';
+        req_queue.send(JSON.stringify(parsed_data));
     }
     else if (parsed_data.type === 'heartbeat') {
         req_queue.send(JSON.stringify({

@@ -66,7 +66,6 @@ function notify_coordinator() {
 broker_sub.subscribe(queue_topic);
 broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('llega2', parsed_data);
     // no hay workers disponibles
     if (my_workers.length === 0) {
         let found = false;
@@ -117,7 +116,6 @@ worker_router.on('message', (worker_id, del, data) => {
     if (parsed_data.type === 'new') {
         // no hay trabajos pendientes
         if (pending_jobs.length === 0) {
-            console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
             notify_coordinator();
         }
@@ -138,13 +136,11 @@ worker_router.on('message', (worker_id, del, data) => {
     }
     // el worker ha finalizado su trabajo
     else if (parsed_data.type === 'response') {
-        console.log('llega8', parsed_data);
         broker_push.send(JSON.stringify({
             type: 'response',
             ...parsed_data
         }));
         if (pending_jobs.length === 0) {
-            console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
             notify_coordinator();
         } else {
