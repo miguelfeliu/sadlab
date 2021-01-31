@@ -14,7 +14,7 @@ const coord_pub = zmq.socket('pub');
 const my_args = process.argv.slice(2);
 
 // bind network data
-const WORKER_ROUTER_PORT = my_args[1];
+const WORKER_ROUTER_PORT = process.env.WORK_ROUTER_PORT || my_args[1];
 const WORKER_ROUTER_IP = 'tcp://*:' + WORKER_ROUTER_PORT;
 
 // queues data
@@ -22,6 +22,8 @@ const queue_topic = my_args[0];
 let my_workers = [];
 const pending_jobs = [];
 const workers_global = new Map();
+
+const host = process.env.NOT_LOCAL ? queue_topic : 'localhost';
 
 // manage disconnected queues
 let workers_pending_for_heatbeat = [];
@@ -32,18 +34,24 @@ worker_router.bind(WORKER_ROUTER_IP);
 
 // connect
 //broker connect
-broker_sub.connect('tcp://localhost:8447');
-broker_push.connect('tcp://localhost:8111');
+const br_conn_addr = process.env.BROKER_SUB_CONN || 'tcp://localhost:8447';
+broker_sub.connect(br_conn_addr);
+const br_push_addr = process.env.BROKER_PUSH_CONN || 'tcp://localhost:8111';
+broker_push.connect(br_push_addr);
 // coordinator connect
-coord_pub.connect('tcp://127.0.0.1:5556');
+const coord_sub_addr = process.env.COORD_SUB_CONN || 'tcp://localhost:5556';
+coord_pub.connect(coord_sub_addr);
+const coord_pub_addr = process.env.COORD_PUB_CONN || 'tcp://localhost:5555';
 coord_sub.subscribe('DATA');
-coord_sub.connect('tcp://127.0.0.1:5555');
+coord_sub.connect(coord_pub_addr);
 
 // init queue
 console.log('Cola ' + queue_topic + ' con ip para que se conecten los workers: ' + WORKER_ROUTER_IP + ' en marcha!')
+let full_ip = 'tcp://' + host + ':' + WORKER_ROUTER_PORT
+
 broker_push.send(JSON.stringify({
     type: 'init_queue',
-    port_worker_to_queue: WORKER_ROUTER_PORT
+    ip_worker_to_queue: full_ip
 }));
 
 // functions
@@ -174,7 +182,6 @@ coord_sub.on('message', function (topic, data) {
     }
     // recibe un trabajo de otra cola
     else if (parsed_data.type === 'job' && parsed_data.queue_to === queue_topic) {
-        console.log('llega6', parsed_data);
         if (my_workers.length > 0) {
             const worker_id = my_workers.shift();
             parsed_data.type = 'request_job';

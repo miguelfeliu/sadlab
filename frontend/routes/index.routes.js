@@ -4,8 +4,10 @@ const uuid = require('node-uuid');
 const push = zmq.socket('push');
 const pull = zmq.socket('pull');
 
-pull.bind('tcp://*:8008');
-push.connect('tcp://localhost:8009');
+const pull_bind = process.env.FRONT_PUSH_BIND || 'tcp://*:8008';
+pull.bind(pull_bind);
+const push_connect = process.env.BROKER_PUSH_CONN || 'tcp://localhost:8009';
+push.connect(push_connect);
 
 
 const router = Router();

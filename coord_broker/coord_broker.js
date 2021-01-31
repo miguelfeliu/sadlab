@@ -5,8 +5,10 @@ const queue_xsub = zmq.socket('xsub');
 const queue_xpub = zmq.socket('xpub');
 
 // bind
-queue_xsub.bind('tcp://*:5556');
-queue_xpub.bind('tcp://*:5555');
+const xsub_bind_addr = process.env.XSUB_BIND || 'tcp://*:5556';
+queue_xsub.bind(xsub_bind_addr);
+const xpub_bind_addr = process.env.XPUB_BIND || 'tcp://*:5555';
+queue_xpub.bind(xpub_bind_addr);
 
 const assossiation_queue_workers = new Map();
 
@@ -43,19 +45,15 @@ queue_xsub.on('message', (topic, data) => {
         send_queue_status(topic);
     }
     else if (parsed_data.type === 'job') {
-        console.log('llega5', parsed_data);
         queue_xpub.send([topic, JSON.stringify(parsed_data)]);
     }
 });
 
 queue_xpub.on('message', (data, bla) => {
-    // The data is a slow Buffer
-    // The first byte is the subscribe (1) /unsubscribe flag (0)
     var type = data[0]===0 ? 'unsubscribe' : 'subscribe';
-    // The channel name is the rest of the buffer
+    
     var channel = data.slice(1).toString();
-    console.log('XPUB REC-> ' + type + ':' + channel);
-    // We send it to subSock, so it knows to what channels to listen to
+    
     queue_xsub.send(data);
   });
 
