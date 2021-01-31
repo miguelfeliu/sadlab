@@ -13,15 +13,11 @@ const router = Router();
 var responses = {};
 
 pull.on('message', function (data) {
-    console.log('Received');
     const parsed_data = JSON.parse(data);
-    console.log(parsed_data);
     const msgId = parsed_data.id;
     let res = responses[msgId];
-
     res.send(parsed_data.message);
     delete responses[msgId];
-    console.log(responses);
 });
 
 router.get('/', (req, res) => {
@@ -29,7 +25,6 @@ router.get('/', (req, res) => {
 });
 
 router.post('/echo', (req, res) => {
-    console.log('Post funcionando');
     const msgId = uuid.v4();
     const data = { id: msgId, message: req.body };
     responses[msgId] = res;

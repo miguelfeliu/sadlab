@@ -40,6 +40,7 @@ coord_sub.subscribe('DATA');
 coord_sub.connect('tcp://127.0.0.1:5555');
 
 // init queue
+console.log('Cola ' + queue_topic + ' con ip para que se conecten los workers: ' + WORKER_ROUTER_IP + ' en marcha!')
 broker_push.send(JSON.stringify({
     type: 'init_queue',
     port_worker_to_queue: WORKER_ROUTER_PORT
@@ -66,16 +67,13 @@ function notify_coordinator() {
 broker_sub.subscribe(queue_topic);
 broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
-    console.log('llega2', parsed_data);
     // no hay workers disponibles
     if (my_workers.length === 0) {
-        console.log('llega3');
         let found = false;
         const queue_names = workers_global.keys();
         for (queue_name of queue_names) {
             if (workers_global.get(queue_name) > 0) {
                 // envía a otra cola
-                console.log('llega4');
                 coord_pub.send(
                     [
                         'DATA',

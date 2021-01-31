@@ -4,9 +4,13 @@ const req_queue = zmq.socket('req');
 
 req_broker.connect('tcp://localhost:8558');
 
+// init worker
+console.log('Worker en marcha!');
+
 req_broker.on('message', data => {
     const parsed_data = JSON.parse(data);
     req_queue.connect(parsed_data.queue_ip);
+    console.log('Worker conectado a la cola con ip:', parsed_data.queue_ip);
     req_queue.send(JSON.stringify({
         type: 'new'
     }));

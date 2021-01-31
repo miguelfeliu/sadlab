@@ -20,7 +20,6 @@ function get_next_queue_ip_for_workers() {
     const queue_ip = round_robin_queues_ip_workers.shift();
     round_robin_queues_ip_workers.push(queue_ip);
     return queue_ip;
-    // return round_robin_queues_ip_workers[1];
 }
 
 function get_next_queue_for_requests() {
@@ -63,7 +62,6 @@ worker_router.on('message', (worker_id, del, data) => {
 // frontend
 frontend_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('llega1', parsed_data);
     const queue_topic = get_next_queue_for_requests();
     queue_pub.send([queue_topic, JSON.stringify(parsed_data)]);
 });

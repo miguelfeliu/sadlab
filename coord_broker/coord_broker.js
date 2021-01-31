@@ -10,6 +10,9 @@ queue_xpub.bind('tcp://*:5555');
 
 const assossiation_queue_workers = new Map();
 
+// init coord_broker
+console.log('Coordinador en marcha!');
+
 // functions
 function print_assossiation_queue_workers() {
     assossiation_queue_workers.forEach((num_workers, queue_name) => {
