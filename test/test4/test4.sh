@@ -9,7 +9,7 @@ gnome-terminal -e "node ../../lbbroker/broker.js"
 sleep 0.5
 
 echo Iniciando broker de coordinación...
-gnome-terminal -e "node ../../../coord_broker/coord_broker.js"
+gnome-terminal -e "node ../../coord_broker/coord_broker.js"
 sleep 0.5
 
 echo Iniciando cola A...
@@ -24,16 +24,11 @@ echo Iniciando cola C...
 gnome-terminal -e "node ../../queue/queue.js queueC 8125"
 sleep 0.5
 
-echo Iniciando un worker...
-gnome-terminal -e "node ../../worker/worker.js"
-sleep 10
-
-echo Iniciando un worker...
-gnome-terminal -e "node ../../worker/worker.js"
-sleep 10
-
-echo Iniciando un worker...
-gnome-terminal -e "node ../../worker/worker.js"
-sleep 10
+for (( c=0; c<6; c++ ))
+do
+    echo Iniciando un worker...
+    gnome-terminal -e "node ../../worker/worker.js"
+    sleep 10
+done
 
 sleep 60

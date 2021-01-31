@@ -37,7 +37,7 @@ gnome-terminal -e "node ../../worker/worker.js"
 sleep 2
 
 # esperamos a que el primer worker que se ha conectado se desconecte
-sleep 15
+sleep 20
 
 curl --header "Content-Type: application/json" \
   --request POST \
