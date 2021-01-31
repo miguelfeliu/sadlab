@@ -1,4 +1,3 @@
-#!/bin/bash
 echo Iniciando test
 
 echo Iniciando frontend...

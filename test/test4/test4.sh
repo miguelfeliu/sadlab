@@ -9,7 +9,7 @@ gnome-terminal -e "node ../../lbbroker/broker.js"
 sleep 0.5
 
 echo Iniciando broker de coordinación...
-gnome-terminal -e "node ../../coord_broker/coord_broker.js"
+gnome-terminal -e "node ../../../coord_broker/coord_broker.js"
 sleep 0.5
 
 echo Iniciando cola A...
@@ -26,19 +26,14 @@ sleep 0.5
 
 echo Iniciando un worker...
 gnome-terminal -e "node ../../worker/worker.js"
-sleep 0.5
+sleep 10
 
 echo Iniciando un worker...
 gnome-terminal -e "node ../../worker/worker.js"
-sleep 0.5
+sleep 10
 
 echo Iniciando un worker...
 gnome-terminal -e "node ../../worker/worker.js"
-sleep 0.5
-
-curl --header "Content-Type: application/json" \
-  --request POST \
-  --data '{"message":"Hola mundo"}' \
-  http://localhost:3000/echo
+sleep 10
 
 sleep 60
