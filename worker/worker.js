@@ -14,11 +14,17 @@ req_broker.on('message', data => {
 
 req_queue.on('message', data => {
     const parsed_data = JSON.parse(data);
-    console.log('llega7', parsed_data);
-    req_queue.send(JSON.stringify({
-        type: 'response',
-        ...parsed_data
-    }));
+    if (parsed_data.type === 'request_job') {
+        req_queue.send(JSON.stringify({
+            type: 'response',
+            ...parsed_data
+        }));
+    }
+    else if (parsed_data.type === 'heartbeat') {
+        req_queue.send(JSON.stringify({
+            type: 'heartbeat'
+        }));
+    }
 });
 
 // the worker asks to the broker for the queue ip

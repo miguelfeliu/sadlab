@@ -19,9 +19,12 @@ const WORKER_ROUTER_IP = 'tcp://*:' + WORKER_ROUTER_PORT;
 
 // queues data
 const queue_topic = my_args[0];
-const my_workers = [];
+let my_workers = [];
 const pending_jobs = [];
 const workers_global = new Map();
+
+// manage disconnected queues
+let workers_pending_for_heatbeat = [];
 
 // bind
 // worker bind
@@ -71,12 +74,17 @@ broker_sub.on('message', (topic, data) => {
         for (queue_name of queue_names) {
             if (workers_global.get(queue_name) > 0) {
                 // envía a otra cola
-                coord_pub.send(['DATA', JSON.stringify({
-                    type: 'job',
-                    queue_from: queue_topic,
-                    queue_to: queue_name,
-                    ...parsed_data
-                })]);
+                coord_pub.send(
+                    [
+                        'DATA',
+                        JSON.stringify({
+                            type: 'job',
+                            queue_from: queue_topic,
+                            queue_to: queue_name,
+                            ...parsed_data
+                        })
+                    ]
+                );
                 found = true;
                 break;
             }
@@ -89,7 +97,16 @@ broker_sub.on('message', (topic, data) => {
     // hay workers disponibles localmente
     else {
         const worker_id = my_workers.shift();
-        worker_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
+        worker_router.send(
+            [
+                Buffer.from(JSON.parse(worker_id)),
+                '',
+                JSON.stringify({
+                    type: 'request_job',
+                    ...parsed_data
+                })
+            ]
+        );
     }
 });
 
@@ -98,13 +115,25 @@ worker_router.on('message', (worker_id, del, data) => {
     const parsed_data = JSON.parse(data);
     // entra un nuevo worker a la cola
     if (parsed_data.type === 'new') {
+        // no hay trabajos pendientes
         if (pending_jobs.length === 0) {
             console.log('No hay trabajos, guardamos worker');
             my_workers.push(JSON.stringify(worker_id));
             notify_coordinator();
-        } else {
+        }
+        // hay trabajos pendientes
+        else {
             const job = pending_jobs.shift();
-            worker_router.send([worker_id, del, JSON.stringify(job)]);
+            worker_router.send(
+                [
+                    worker_id,
+                    del,
+                    JSON.stringify({
+                        type: 'request_job',
+                        ...job
+                    })
+                ]
+            );
         }
     }
     // el worker ha finalizado su trabajo
@@ -120,8 +149,20 @@ worker_router.on('message', (worker_id, del, data) => {
             notify_coordinator();
         } else {
             const job = pending_jobs.shift();
-            worker_router.send([worker_id, del, JSON.stringify(job)]);
+            worker_router.send(
+                [
+                    worker_id,
+                    del,
+                    JSON.stringify({
+                        type: 'request_job',
+                        job
+                    })
+                ]
+            );
         }
+    } else if (parsed_data.type === 'heartbeat') {
+        const index_alive_worker = workers_pending_for_heatbeat.indexOf(JSON.stringify(worker_id));
+        workers_pending_for_heatbeat.splice(index_alive_worker, 1);
     }
 });
 
@@ -138,12 +179,50 @@ coord_sub.on('message', function (topic, data) {
     else if (parsed_data.type === 'job' && parsed_data.queue_to === queue_topic) {
         if (my_workers.length > 0) {
             const worker_id = my_workers.shift();
-            parsed_data.type = 'response';
-            worker_router.send([Buffer.from(JSON.parse(worker_id)), '', JSON.stringify(parsed_data)]);
+            // parsed_data.type = 'response';
+            worker_router.send(
+                [
+                    Buffer.from(JSON.parse(worker_id)),
+                    '',
+                    JSON.stringify({
+                        type: 'request_job',
+                        ...parsed_data
+                    })
+                ]
+            );
         }
     }
 });
 
+// heartbeat
+setInterval(() => {
+    // si hay colas que no han respondido al heartbeat
+    if (workers_pending_for_heatbeat.length > 0) {
+        workers_pending_for_heatbeat.forEach(worker_id => {
+            const index_worker_not_alive = my_workers.indexOf(worker_id);
+            my_workers.splice(index_worker_not_alive, 1);
+        });
+        notify_coordinator();
+    }
+    workers_pending_for_heatbeat = [];
+    my_workers.forEach(worker_id => {
+        workers_pending_for_heatbeat.push(worker_id);
+    });
+    my_workers.forEach(worker_id => {
+        worker_router.send(
+            [
+                Buffer.from(JSON.parse(worker_id)),
+                '',
+                JSON.stringify({
+                    type: 'heartbeat'
+                })
+            ]
+        );
+    });
+}, 4000);
+
 setInterval(() => {
     print_workers_global();
 }, 5000);
+
+notify_coordinator();
