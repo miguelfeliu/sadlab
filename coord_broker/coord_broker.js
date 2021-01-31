@@ -40,6 +40,7 @@ queue_xsub.on('message', (topic, data) => {
         send_queue_status(topic);
     }
     else if (parsed_data.type === 'job') {
+        console.log('llega5', parsed_data);
         queue_xpub.send([topic, JSON.stringify(parsed_data)]);
     }
 });

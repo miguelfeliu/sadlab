@@ -63,6 +63,7 @@ worker_router.on('message', (worker_id, del, data) => {
 // frontend
 frontend_pull.on('message', data => {
     const parsed_data = JSON.parse(data);
+    console.log('llega1', parsed_data);
     const queue_topic = get_next_queue_for_requests();
     queue_pub.send([queue_topic, JSON.stringify(parsed_data)]);
 });

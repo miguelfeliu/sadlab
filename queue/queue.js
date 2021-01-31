@@ -66,13 +66,16 @@ function notify_coordinator() {
 broker_sub.subscribe(queue_topic);
 broker_sub.on('message', (topic, data) => {
     const parsed_data = JSON.parse(data);
+    console.log('llega2', parsed_data);
     // no hay workers disponibles
     if (my_workers.length === 0) {
+        console.log('llega3');
         let found = false;
         const queue_names = workers_global.keys();
         for (queue_name of queue_names) {
             if (workers_global.get(queue_name) > 0) {
                 // envía a otra cola
+                console.log('llega4');
                 coord_pub.send(
                     [
                         'DATA',
@@ -173,17 +176,15 @@ coord_sub.on('message', function (topic, data) {
     }
     // recibe un trabajo de otra cola
     else if (parsed_data.type === 'job' && parsed_data.queue_to === queue_topic) {
+        console.log('llega6', parsed_data);
         if (my_workers.length > 0) {
             const worker_id = my_workers.shift();
-            // parsed_data.type = 'response';
+            parsed_data.type = 'request_job';
             worker_router.send(
                 [
                     Buffer.from(JSON.parse(worker_id)),
                     '',
-                    JSON.stringify({
-                        type: 'request_job',
-                        ...parsed_data
-                    })
+                    JSON.stringify(parsed_data)
                 ]
             );
         }
