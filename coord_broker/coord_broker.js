@@ -42,11 +42,6 @@ queue_xsub.on('message', (topic, data) => {
     else if (parsed_data.type === 'job') {
         queue_xpub.send([topic, JSON.stringify(parsed_data)]);
     }
-    /*else if (parsed_data.type === 'heartbeat') {
-        console.log('heartbeat parsed data', parsed_data);
-        const index_of_alive_queue = queues_pending_for_heatbeat.indexOf(parsed_data.queue_name);
-        queues_pending_for_heatbeat = queues_pending_for_heatbeat.splice(index_of_alive_queue, 1);
-    }*/
 });
 
 queue_xpub.on('message', (data, bla) => {
